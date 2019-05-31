@@ -50,34 +50,35 @@ class Solution:
         """
         Computes the cost of this solution.
         """
-        cost = [0] * (len(self.truck_path))
+        costs = [0] * (len(self.truck_path))
 
         # filling cost_truck list
         i = self.truck_path[0]
         t = 1
         for j in self.truck_path[1:]:
             # getting first the cost for the truck
-            cost[t] = cost[t - 1] + self.inst.tau_truck[i][j]
+            costs[t] = costs[t - 1] + self.inst.tau_truck[i][j]
 
             # getting SL additional cost
-            if [key for key in self.drone_visits if key[0] == i and (not self.murray_rules or i != 0)]:
-                cost[t] += self.inst.sl
+            if [key for key in self.drone_visits if key[0] == i and (not self.murray_rules or i != 0) and i != 0]:
+                costs[t] += self.inst.sl
 
             # getting SR additional cost
             if [key for key in self.drone_visits if key[2] == j]:
-                cost[t] += self.inst.sr
+                costs[t] += self.inst.sr
 
             # now comparing against cost given by drones
             for (k, l, m) in [key for key in self.drone_visits if key[2] == j]:
                 ell = self.truck_path.index(k)
-                cost[t] = max(cost[t], cost[ell] + self.inst.tau_drone[k][l] + self.inst.tau_drone[l][m]
-                              + (0 if self.murray_rules else self.inst.sl) + self.inst.sr)
+                costs[t] = max(costs[t], costs[ell] + self.inst.tau_drone[k][l] + self.inst.tau_drone[l][m]
+                               + (0 if self.murray_rules else self.inst.sl) + self.inst.sr)
 
             # updating i and t vars
             i = j
             t = t + 1
 
-        self.cost = cost[-1]
+        self.costs = costs
+        self.cost = costs[-1]
         self.computed = True
 
     def _compute_paths(self):
@@ -222,12 +223,19 @@ class Solution:
                 f.write("    %-7s\t%10.4f\n" % ("SL+SR", cost_sl_sr))
                 f.write("\n")
 
+            # writing details about the whole trip
+            f.write("Trip times:\n")
+            for i in range(len(self.truck_path[1:])):
+                f.write("    %-7s\t%10.4f\n" % ("T({i:2})".format(**locals()), self.costs[i]))
+            f.write("    %-7s\t%10.4f\n" % ("Total ", self.costs[-1]))
+            f.write("\n")
+
             # writing details about the truck trip
             f.write("Truck times (ignoring eventual waiting times):\n")
             i = self.truck_path[0]
             dist = 0
             for n, j in enumerate(self.truck_path[1:]):
-                sl = inst.sl if [1 for key in self.drone_visits if key[0] == i and (not self.murray_rules or i != 0)] else 0
+                sl = inst.sl if [1 for key in self.drone_visits if key[0] == i and (not self.murray_rules or i != 0) and i != 0] else 0
                 sr = inst.sr if [1 for key in self.drone_visits if key[2] == j] else 0
                 dist += self.inst.tau_truck[i][j] + sl + sr
 

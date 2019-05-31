@@ -9,8 +9,11 @@ from Murray et al (2015).
 __author__ = "Tulio Toffolo"
 __copyright__ = "Copyright 2018, UFOP"
 
+import os
+import sys
 import time
-from gurobipy import *
+from mip.model import *
+
 from arguments import Arguments
 from instance import Instance
 from solution import Solution
@@ -48,133 +51,132 @@ class CompactFormulation:
         model = Model()
         L = Ell(inst)
 
-        x = {(i, j, ell): model.addVar(obj=0, vtype=GRB.BINARY,
-                                       name="x({i},{j}__{ell})".format(**locals()))
+        x = {(i, j, ell): model.add_var(obj=0, var_type=BINARY,
+                                        name="x({i},{j}__{ell})".format(**locals()))
              for (i, j) in inst.A
              for ell in L.list}
 
-        y = {(i, j, k, ell, ell_): model.addVar(obj=0,
-                                                vtype=GRB.BINARY,
-                                                name="y({i},{j},{k}__{ell},{ell_})".format(**locals()))
+        y = {(i, j, k, ell, ell_): model.add_var(obj=0,
+                                                 var_type=BINARY,
+                                                 name="y({i},{j},{k}__{ell},{ell_})".format(**locals()))
              for (i, j, k) in inst.D
              for ell in L.list
              for ell_ in L.list_ell_prime(ell)}
 
-        t = [model.addVar(obj=0,
-                          name="t({ell})".format(**locals()))
+        t = [model.add_var(obj=0,
+                           name="t({ell})".format(**locals()))
              for ell in L.list]
         t[0].ub = 0
-        t.append(model.addVar(obj=1, name="t_total".format(**locals())))
+        t.append(model.add_var(obj=1, name="t_total".format(**locals())))
 
         # depot constraints
-        model.addConstr(quicksum(x[0, j, 0]
-                                 for j in inst.V if (0, j) in inst.A)
-                        == quicksum(x[j, 0, ell]
-                                    for j in inst.V if (j, 0) in inst.A
-                                    for ell in L.list[1:]),
-                        "depot")
-        model.addConstr(quicksum(x[0, j, 0]
-                                 for j in inst.V if (0, j) in inst.A) == 1,
-                        "depot_eq_1")
+        model.add_constr(xsum(x[0, j, 0]
+                              for j in inst.V if (0, j) in inst.A)
+                         == xsum(x[j, 0, ell]
+                                 for j in inst.V if (j, 0) in inst.A
+                                 for ell in L.list[1:]),
+                         "depot")
+        model.add_constr(xsum(x[0, j, 0]
+                              for j in inst.V if (0, j) in inst.A) == 1,
+                         "depot_eq_1")
 
         # single customer visit
         for i in inst.V:
-            model.addConstr(quicksum(x[i, j, ell]
-                                     for j in inst.V if (i, j) in inst.A
-                                     for ell in L.list) <= 1,
-                            "single_moment_in({i})".format(**locals()))
-            model.addConstr(quicksum(x[j, i, ell]
-                                     for j in inst.V if (j, i) in inst.A
-                                     for ell in L.list) <= 1,
-                            "single_moment_out({i})".format(**locals()))
+            model.add_constr(xsum(x[i, j, ell]
+                                  for j in inst.V if (i, j) in inst.A
+                                  for ell in L.list) <= 1,
+                             "single_moment_in({i})".format(**locals()))
+            model.add_constr(xsum(x[j, i, ell]
+                                  for j in inst.V if (j, i) in inst.A
+                                  for ell in L.list) <= 1,
+                             "single_moment_out({i})".format(**locals()))
 
         # flow preservation constraints
         for k in inst.V_:
             for ell in L.list[1:]:
-                model.addConstr(quicksum(x[j, k, ell - 1]
-                                         for j in inst.V if (j, k) in inst.A)
-                                == quicksum(x[k, j, ell]
-                                            for j in inst.V if (k, j) in inst.A),
-                                "flow({k},{ell})".format(**locals()))
+                model.add_constr(xsum(x[j, k, ell - 1]
+                                      for j in inst.V if (j, k) in inst.A)
+                                 == xsum(x[k, j, ell]
+                                         for j in inst.V if (k, j) in inst.A),
+                                 "flow({k},{ell})".format(**locals()))
 
         # one arc per moment constraints
         for ell in L.list:
-            model.addConstr(quicksum(x[i, j, ell]
-                                     for (i, j) in inst.A)
-                            <= 1, "one_arc({ell})".format(**locals()))
+            model.add_constr(xsum(x[i, j, ell]
+                                  for (i, j) in inst.A)
+                             <= 1, "one_arc({ell})".format(**locals()))
 
         # one drone per moment constraints
         for ell in L.list:
-            model.addConstr(quicksum(y[i, k, j, l, l_]
-                                     for (i, k, j) in inst.D
-                                     for l in L.list[:ell + 1]
-                                     for l_ in L.list[ell + 1:l + 1 + L.max_l])
-                            <= 1, "one_drone({ell})".format(**locals()))
+            model.add_constr(xsum(y[i, k, j, l, l_]
+                                  for (i, k, j) in inst.D
+                                  for l in L.list[:ell + 1]
+                                  for l_ in L.list[ell + 1:l + 1 + L.max_l])
+                             <= 1, "one_drone({ell})".format(**locals()))
 
         # all customers must be visited constraints
         for k in inst.V_:
-            model.addConstr(quicksum(x[k, j, l]
-                                     for j in inst.V if (k, j) in inst.A
-                                     for l in L.list)
-                            + quicksum(y[i, k, j, l, l_]
-                                       for i in inst.V
-                                       for j in inst.V if (i, k, j) in inst.D
-                                       for l in L.list
-                                       for l_ in L.list_ell_prime(l))
-                            == 1, "all_customers({k})".format(**locals()))
+            model.add_constr(xsum(x[k, j, l]
+                                  for j in inst.V if (k, j) in inst.A
+                                  for l in L.list)
+                             + xsum(y[i, k, j, l, l_]
+                                    for i in inst.V
+                                    for j in inst.V if (i, k, j) in inst.D
+                                    for l in L.list
+                                    for l_ in L.list_ell_prime(l))
+                             == 1, "all_customers({k})".format(**locals()))
 
         # drone launch constraints
         for i in inst.V:
             for ell in L.list:
-                model.addConstr(quicksum(y[i, k, j, ell, l_]
-                                         for k in inst.V_
-                                         for j in inst.V if (i, k, j) in inst.D
-                                         for l_ in L.list_ell_prime(ell))
-                                <= quicksum(x[i, j, ell]
-                                            for j in inst.V if (i, j) in inst.A),
-                                "drone_launch({i},{ell})".format(**locals()))
+                model.add_constr(xsum(y[i, k, j, ell, l_]
+                                      for k in inst.V_
+                                      for j in inst.V if (i, k, j) in inst.D
+                                      for l_ in L.list_ell_prime(ell))
+                                 <= xsum(x[i, j, ell]
+                                         for j in inst.V if (i, j) in inst.A),
+                                 "drone_launch({i},{ell})".format(**locals()))
 
         # drone return constraints
         for j in inst.V:
             for ell_ in L.list[1:]:
-                model.addConstr(quicksum(y[i, k, j, l, ell_]
-                                         for i in inst.V
-                                         for k in inst.V_ if (i, k, j) in inst.D
-                                         for l in L.list_ell(ell_))
-                                <= quicksum(x[i, j, ell_ - 1]
-                                            for i in inst.V if (i, j) in inst.A),
-                                "drone_return({j},{ell_})".format(**locals()))
+                model.add_constr(xsum(y[i, k, j, l, ell_]
+                                      for i in inst.V
+                                      for k in inst.V_ if (i, k, j) in inst.D
+                                      for l in L.list_ell(ell_))
+                                 <= xsum(x[i, j, ell_ - 1]
+                                         for i in inst.V if (i, j) in inst.A),
+                                 "drone_return({j},{ell_})".format(**locals()))
 
         # maximum drone endurance constraints
         for idx, ell in enumerate(L.list[1:]):
             if murray_rules:  # and idx == 0:
                 continue
             for ell_ in L.list_ell_prime(ell):
-                model.addConstr(t[ell_] - t[ell]
-                                <= inst.E
-                                + big_m * (1 - quicksum(y[i, k, j, ell, ell_]
-                                                        for (i, k, j) in inst.D)),
-                                "endurance({ell},{ell_})".format(**locals()))
+                model.add_constr(t[ell_] - t[ell] <= inst.E
+                                 + big_m * (1 - xsum(y[i, k, j, ell, ell_]
+                                                     for (i, k, j) in inst.D)),
+                                 "endurance({ell},{ell_})".format(**locals()))
 
         # time constraints considering only the truck and drone setup time
         for ell in L.list[1:] + [len(L.list)]:
-            model.addConstr(t[ell] >= t[ell - 1]
-                            + quicksum(inst.tau_truck[i][j] * x[i, j, ell - 1]
-                                       for (i, j) in inst.A)
-                            + inst.sl * (quicksum(y[i, k, j, ell - 1, ell_]
-                                                  for (i, k, j) in inst.D for ell_ in L.list_ell_prime(ell - 1) if i != 0))
-                            + inst.sr * (quicksum(y[i, k, j, ell_, ell]
-                                                  for (i, k, j) in inst.D for ell_ in L.list_ell(ell))),
-                            "time_truck_only({ell})".format(**locals()))
+            model.add_constr(t[ell] >= t[ell - 1]
+                             + xsum(inst.tau_truck[i][j] * x[i, j, ell - 1]
+                                    for (i, j) in inst.A)
+                             + inst.sl * (xsum(y[i, k, j, ell - 1, ell_]
+                                               for (i, k, j) in inst.D for ell_ in L.list_ell_prime(ell - 1) if i != 0))
+                             + inst.sr * (xsum(y[i, k, j, ell_, ell]
+                                               for (i, k, j) in inst.D for ell_ in L.list_ell(ell))),
+                             "time_truck_only({ell})".format(**locals()))
 
         # time constraints accounting drone's time
         for ell_ in L.list[1:]:
             for ell in L.list_ell(ell_):
-                model.addConstr(t[ell_] >= t[ell]
-                                + quicksum((inst.tau_drone[i][k] + inst.tau_drone[k][j] + (0 if murray_rules else inst.sl) + inst.sr)
-                                           * y[i, k, j, ell, ell_]
-                                           for (i, k, j) in inst.D),
-                                "time_drones({ell},{ell_})".format(**locals()))
+                model.add_constr(t[ell_] >= t[ell]
+                                 + xsum((inst.tau_drone[i][k] + inst.tau_drone[k][j] + (0 if murray_rules else inst.sl) + inst.sr)
+                                        * y[i, k, j, ell, ell_]
+                                        for (i, k, j) in inst.D),
+                                 "time_drones({ell},{ell_})".format(**locals()))
 
         # creating class variables
         self.inst = inst
@@ -193,6 +195,7 @@ class CompactFormulation:
         passed as arguments
         """
         if sol:
+            mip_start = []
             # reading initial solution file
             initial_solution = Solution(self.inst, self.murray_rules)
             initial_solution.read(sol)
@@ -200,23 +203,22 @@ class CompactFormulation:
             # setting initial truck path
             i = initial_solution.truck_path[0]
             for ell, j in enumerate(initial_solution.truck_path[1:]):
-                self.x[i, j, ell].start = 1
+                mip_start.append((self.x[i, j, ell], 1.0))
                 i = j
 
             # setting initial drone paths
             for (i, j, k) in initial_solution.drone_paths:
                 ell = initial_solution.truck_path.index(i)
                 ell_ = initial_solution.truck_path.index(k) if k != 0 else len(initial_solution.truck_path) - 1
-                self.y[i, j, k, ell, ell_].start = 1
+                mip_start.append((self.y[i, j, k, ell, ell_], 1.0))
 
-        self.model.setParam("timelimit", timelimit)
-        self.model.update()
+            self.model.start = mip_start
+
         self.model.write("logs/fstsp.lp")
-        self.model.optimize()
-        self.model.write("logs/fstsp.sol")
+        self.model.optimize(max_seconds=timelimit)
 
         # creating final solution
-        self.solution = Solution(self.inst, cost=self.model.objval, murray_rules=self.murray_rules)
+        self.solution = Solution(self.inst, cost=self.model.objective_value, murray_rules=self.murray_rules)
         for key in [key for key in self.x.keys() if self.x[key].x > EPS]:
             self.solution.add_truck_arc((key[0], key[1]))
         for key in [key for key in self.y.keys() if self.y[key].x > EPS]:
