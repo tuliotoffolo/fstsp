@@ -2,7 +2,23 @@
 
 ### MIP formulations
 
-This repository contains multiple MIP formulations for the problem.
+This repository contains multiple MIP formulations for the problem. For more information, see the article [Exact and Heuristic Approaches to Drone Delivery Problems](https://arxiv.org/abs/2108.01996).
+
+To cite our work, please use the following:
+
+```bib
+@misc{freitas2021exact,
+    title={Exact and Heuristic Approaches to Drone Delivery Problems}, 
+    author={Júlia C. Freitas and Puca Huachi V. Penna and Túlio A. M. Toffolo},
+    year={2021},
+    eprint={2108.01996},
+    archivePrefix={arXiv},
+    primaryClass={cs.AI}
+}
+```
+
+## How to execute
+
 To execute them, use the syntax presented below:
 
 ```
