@@ -17,9 +17,9 @@ To cite our work, please use the following:
 }
 ```
 
-## How to execute
+## How to run
 
-To execute them, use the syntax presented below:
+To run the code, use the syntax presented below:
 
 ```
 Usage: gurobi.sh <formulation.py> <instance_file> [options]
