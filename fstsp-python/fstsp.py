@@ -6,7 +6,7 @@ by Ponza (2016), except when the flag "murray_rules" is set, which applies the r
 from Murray et al (2015).
 """
 
-__author__ = "Tulio Toffolo and Julia Caria"
+__author__ = "Julia Caria and Tulio Toffolo"
 __copyright__ = "Copyright 2018, UFOP"
 
 import os
