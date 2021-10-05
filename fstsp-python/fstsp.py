@@ -6,7 +6,7 @@ by Ponza (2016), except when the flag "murray_rules" is set, which applies the r
 from Murray et al (2015).
 """
 
-__author__ = "Tulio Toffolo"
+__author__ = "Tulio Toffolo and Julia Caria"
 __copyright__ = "Copyright 2018, UFOP"
 
 import os
@@ -23,7 +23,7 @@ EPS = 1e-5
 
 class Ell:
     """
-    This class represents the 'moments' used within the formulation.
+    This class represents the 'positions' used within the formulation.
     """
 
     def __init__(self, inst):
@@ -85,11 +85,11 @@ class CompactFormulation:
             model.add_constr(xsum(x[i, j, ell]
                                   for j in inst.V if (i, j) in inst.A
                                   for ell in L.list) <= 1,
-                             "single_moment_in({i})".format(**locals()))
+                             "single_position_in({i})".format(**locals()))
             model.add_constr(xsum(x[j, i, ell]
                                   for j in inst.V if (j, i) in inst.A
                                   for ell in L.list) <= 1,
-                             "single_moment_out({i})".format(**locals()))
+                             "single_position_out({i})".format(**locals()))
 
         # flow preservation constraints
         for k in inst.V_:
@@ -100,13 +100,13 @@ class CompactFormulation:
                                          for j in inst.V if (k, j) in inst.A),
                                  "flow({k},{ell})".format(**locals()))
 
-        # one arc per moment constraints
+        # one arc per position constraints
         for ell in L.list:
             model.add_constr(xsum(x[i, j, ell]
                                   for (i, j) in inst.A)
                              <= 1, "one_arc({ell})".format(**locals()))
 
-        # one drone per moment constraints
+        # one drone per position constraints
         for ell in L.list:
             model.add_constr(xsum(y[i, k, j, l, l_]
                                   for (i, k, j) in inst.D
