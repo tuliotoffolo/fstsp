@@ -9,7 +9,7 @@ To cite our work, please use the following:
 ```bib
 @misc{freitas2021exact,
     title={Exact and Heuristic Approaches to Drone Delivery Problems}, 
-    author={Júlia C. Freitas and Puca Huachi V. Penna and Túlio A. M. Toffolo},
+    author={J\'ulia C. Freitas and Puca Huachi V. Penna and T\'ulio A. M. Toffolo},
     year={2021},
     eprint={2108.01996},
     archivePrefix={arXiv},
