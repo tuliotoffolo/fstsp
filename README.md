@@ -43,10 +43,10 @@ Options:
     -validate            : use formulation only to validate the initial solution.
     
 Examples:
-    gurobi.sh fstsp.py data/5a
-    gurobi.sh murray_fstsp.py data/5b
-    gurobi.sh fstsp.py data/5a -e 50 -m 100
-    gurobi.sh fstsp.py data/20140810T123437v1 -e 20 -sol initial_solution.txt -out final_solution.txt -time 3600 
+    python3 fstsp.py data/5a
+    python3 murray_fstsp.py data/5b
+    python3 fstsp.py data/5a -e 50 -m 100
+    python3 fstsp.py data/20140810T123437v1 -e 20 -sol initial_solution.txt -out final_solution.txt -time 3600 
 ```
 
 ## References
