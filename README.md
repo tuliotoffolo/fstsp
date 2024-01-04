@@ -7,13 +7,16 @@ This repository contains multiple MIP formulations for the problem. For more inf
 To cite our work, please use the following:
 
 ```bib
-@misc{freitas2021exact,
-    title={Exact and Heuristic Approaches to Drone Delivery Problems}, 
-    author={J\'ulia C. Freitas and Puca Huachi V. Penna and T\'ulio A. M. Toffolo},
-    year={2021},
-    eprint={2108.01996},
-    archivePrefix={arXiv},
-    primaryClass={cs.AI}
+@article{Freitas2023,
+    title = {Exact and heuristic approaches to Truck–Drone Delivery Problems},
+    journal = {EURO Journal on Transportation and Logistics},
+    volume = {12},
+    pages = {100094},
+    year = {2023},
+    issn = {2192-4376},
+    doi = {https://doi.org/10.1016/j.ejtl.2022.100094},
+    url = {https://www.sciencedirect.com/science/article/pii/S219243762200019X},
+    author = {J\'{u}lia C. Freitas and Puca Huachi V. Penna and T\'{u}lio A.M. Toffolo},
 }
 ```
 
